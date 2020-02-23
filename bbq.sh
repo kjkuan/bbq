@@ -4,9 +4,14 @@
 #
 # bbq.sh provides a few convenient Bash functions for creating and working with
 # Linux named pipes (FIFO).  Its primary use case is to set up multiple worker
-# processes getting work from a single job queue in your shell script; please
-# see the examples/basic script for an example usage.
+# processes getting work from a single job queue in your shell script.
 #
+# Please see the examples/basic script for an example usage of bbq.sh.
+#
+# Requirements:
+#   - Linux, Bash, GNU coreutils, and flock from util-linux.
+#
+
 if [[ ${bbq_SOURCED:-} ]]; then
     return 0
 fi
