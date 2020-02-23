@@ -1,0 +1,68 @@
+#!/usr/bin/env bash
+#
+set -eo pipefail
+
+WORKERS=$(nproc)
+WORKERS=$(( WORKERS  * 2 ))
+
+long-running-computation () (
+    set +e # We don't want errors to exit the worker.
+
+    # NOTE: You might want to use exec to redirect STDOUT and/or STDERR
+    # to log files and also log the exit status of the work somewhere.
+    # Here we simply write the work progress and status to STDOUT.
+
+    local work_id=$1; shift
+    echo "Running with args: $@"
+    echo "(PID=$BASHPID)"
+    echo ..........
+    sleep $(( RANDOM % 20 ))
+    local rc=$(( RANDOM % 2 ))
+    if [[ $rc = 0 ]]; then
+        echo "Work $work_id is successful!"
+    else
+        echo "Work $work_id failed!"
+    fi
+)
+
+source "$(dirname "$0")/../bbq.sh"
+
+# It's recommended that you do the following at the end of your script, in the
+# order shown below, to reduce the chance of blocking when calling the bbq
+# function to enqueue commands.
+#----------------------------------------------------------------------------
+
+# Create a named pipe and set it as the default to be used by bbq.
+bbq-new
+
+# Set up the workers to read from the queue and run the dequeued commands.
+#
+bbq-start -w $WORKERS; bbq_pid=$!
+echo "NOTE: If you kill $bbq_pid; you will also terminated the workers."
+echo
+#
+# Note that if you plan to invoke bbq-start multiple times on the same queue
+# (e.g.,  you later decide to add more workers for an existing queue) you
+# should specify the queue path explicitly each time, like so:
+#
+#   $ myq=my-queue; bbq-new $myq
+#   $ bbq-start -w 4 $myq; bbq-start -w 4 $myq
+#
+# Above would start a total of 8 workers working on $myq.
+
+
+# Add commands to the queue.
+# Alternatively, you can also do the enqueuing in a background subshell to
+# avoid blocking the main process if required.
+# 
+q () { printf "%q " "$@"; }
+for ((i=0; i < $(( WORKERS * 4 )); i++)); do
+    bbq 'echo "This is worker $BASHPID"'
+    bbq "long-running-computation $i scheduled at $(q "$(date)")"
+done
+
+# Add a 'break' for each worker to break out of its process loop.
+for ((i=0; i < WORKERS; i++)); do bbq break; done
+
+# Wait for bbq workers to quit
+wait $bbq_pid
