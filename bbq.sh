@@ -8,14 +8,14 @@
 # see the examples/basic script for an example usage.
 #
 if [[ ${bbq_SOURCED:-} ]]; then
-	return 0
+    return 0
 fi
 bbq_error () { echo "$@" >&2; }
 bbq_debug () { if [[ ${bbq_DEBUG:-} ]]; then echo "$@" >&2; fi; }
 
 if [[ $BASH_SOURCE == "$0" ]]; then
-	bbq_error "Please source bbq.sh instead of running it!"
-	exit 1
+    bbq_error "Please source bbq.sh instead of running it!"
+    exit 1
 fi
 
 # Set it to enable some debugging outputs.
@@ -40,10 +40,10 @@ bbq_CHUNK_SIZE=1024  # bytes; on Linux the limit is 4k.
 # current directory.
 #
 bbq-new () {  # [queue]
-	local queue=${1:-}
-	[[ $queue ]] || queue=bbq-$$-$RANDOM
-	[[ $queue == /* ]] || queue=$PWD/$queue
-	mkfifo -m 0600 "$queue" || return $?
+    local queue=${1:-}
+    [[ $queue ]] || queue=bbq-$$-$RANDOM
+    [[ $queue == /* ]] || queue=$PWD/$queue
+    mkfifo -m 0600 "$queue" || return $?
     bbq_FIFO=$queue
 }
 
@@ -96,7 +96,7 @@ bbq () {  # <command> [queue]
         bbq_error "Encoded message exceeds allowed chunk size ($bbq_CHUNK_SIZE): $code"
         return 1
     fi
-	[[ $queue ]] || return $?
+    [[ $queue ]] || return $?
 
     # Accoridng to docs and google, on linux, read/write less than PIPE_BUF (4k
     # bytes) on a FIFO is atomic. So, we don't need to lock before writes.
@@ -109,10 +109,10 @@ bbq () {  # <command> [queue]
 # Internal implementation for bbq-start()
 #
 _bbq_start_workers () {  # [-w COUNT] [queue]
-	local option; OPTIND=1
+    local option; OPTIND=1
     while getopts ':w:' option "$@"; do
         case $option in
-			w) bbq_WORKER_COUNT=$OPTARG ;;
+            w) bbq_WORKER_COUNT=$OPTARG ;;
             :) bbq_error "$FUNCNAME: Missing option argument for -$OPTARG"; return 1 ;;
             \?) bbq_error "$FUNCNAME: Unknown option: -$OPTARG"; return 1 ;;
         esac
@@ -126,17 +126,17 @@ _bbq_start_workers () {  # [-w COUNT] [queue]
             return 1
         }
 
-	local queue=${1:-}
-	if [[ $queue ]]; then
-		[[ $queue == /* ]] || queue=$PWD/$queue
-		bbq_FIFO=$queue
-	else
-		bbq_owns_the_pipe=1
-	fi
-	[[ -p ${bbq_FIFO:?required} ]] || {
-		bbq_error "$bbq_FIFO must be a named pipe!"
-		return 1
-	}
+    local queue=${1:-}
+    if [[ $queue ]]; then
+        [[ $queue == /* ]] || queue=$PWD/$queue
+        bbq_FIFO=$queue
+    else
+        bbq_owns_the_pipe=1
+    fi
+    [[ -p ${bbq_FIFO:?required} ]] || {
+        bbq_error "$bbq_FIFO must be a named pipe!"
+        return 1
+    }
 
     # Fork the workers to do work.
     # This needs to be done before we can enqueue anything without blocking.
